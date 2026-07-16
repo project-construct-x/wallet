@@ -16,7 +16,6 @@ package org.eclipse.edc.identityhub.core.services.verifiablecredential;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.JsonObject;
-import org.eclipse.edc.iam.verifiablecredentials.spi.model.CredentialFormat;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.CredentialSubject;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.VerifiableCredential;
 import org.eclipse.edc.iam.verifiablecredentials.spi.model.VerifiableCredentialContainer;
@@ -24,6 +23,7 @@ import org.eclipse.edc.identityhub.spi.credential.request.model.HolderRequestSta
 import org.eclipse.edc.identityhub.spi.credential.request.store.HolderCredentialRequestStore;
 import org.eclipse.edc.identityhub.spi.verifiablecredentials.generator.CredentialWriteRequest;
 import org.eclipse.edc.identityhub.spi.verifiablecredentials.generator.CredentialWriter;
+import org.eclipse.edc.identityhub.spi.verifiablecredentials.model.CredentialProfile;
 import org.eclipse.edc.identityhub.spi.verifiablecredentials.model.VcStatus;
 import org.eclipse.edc.identityhub.spi.verifiablecredentials.model.VerifiableCredentialResource;
 import org.eclipse.edc.identityhub.spi.verifiablecredentials.store.CredentialStore;
@@ -35,7 +35,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -47,7 +46,7 @@ import static org.eclipse.edc.spi.result.ServiceResult.success;
 
 
 public class CredentialWriterImpl implements CredentialWriter {
-    private static final List<String> VALID_CREDENTIAL_FORMATS = Arrays.stream(CredentialFormat.values()).map(Object::toString).toList();
+
     private static final List<HolderRequestState> ALLOWED_STATES = List.of(REQUESTED, ISSUED);
     private final CredentialStore credentialStore;
     private final TypeTransformerRegistry credentialTransformerRegistry;
@@ -89,15 +88,28 @@ public class CredentialWriterImpl implements CredentialWriter {
                 // verify that the received credentials correspond to the credential request that was made prior
                 var receivedCredential = resource.getVerifiableCredential();
                 var receivedTypes = receivedCredential.credential().getType();
-                var receivedFormat = receivedCredential.format().toString();
+
+                // convert received format to a CredentialFormat
+                var receivedFormat = CredentialProfile.formatForProfile(writeRequest.credentialFormat());
+                if (receivedFormat.failed()) {
+                    return receivedFormat.mapFailure();
+                }
 
                 // check if the list of originally requested credentials contains the received credential
                 var requestedCredential = holderRequest.getIdsAndFormats().stream()
-                        .filter(rqc -> receivedTypes.contains(rqc.credentialType()) && receivedFormat.equalsIgnoreCase(rqc.format()))
+                        .filter(rqc -> receivedTypes.contains(rqc.credentialType()))
+                        // for compatibility, we need to convert both to a CredentialFormat and compare that:
+                        .filter(rqc -> {
+                            var requestedFormat = CredentialProfile.formatForProfile(rqc.format());
+                            if (requestedFormat.failed()) {
+                                return false;
+                            }
+                            return requestedFormat.getContent().equals(receivedFormat.getContent());
+                        })
                         .findFirst();
 
                 if (requestedCredential.isEmpty()) {
-                    return ServiceResult.unauthorized("No credential request was made for Credentials of type '%s' serialized as '%s'".formatted(receivedTypes, receivedFormat));
+                    return ServiceResult.unauthorized("No credential request was made for Credentials of type '%s' serialized as '%s'".formatted(receivedTypes, receivedFormat.getContent()));
                 }
 
                 // store the credential object ID for later use, e.g. automatic re-issuance
@@ -120,11 +132,11 @@ public class CredentialWriterImpl implements CredentialWriter {
 
     private ServiceResult<VerifiableCredentialResource> convertToResource(CredentialWriteRequest credentialWriteRequest, String participantContextId) {
 
-        CredentialFormat credentialFormat;
-        try {
-            credentialFormat = CredentialFormat.valueOf(credentialWriteRequest.credentialFormat().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return ServiceResult.badRequest(String.format("Invalid format: '%s', expected one of %s".formatted(credentialWriteRequest.credentialFormat(), VALID_CREDENTIAL_FORMATS)));
+        var profile = credentialWriteRequest.credentialFormat();
+        var mappedFormat = CredentialProfile.formatForProfile(profile);
+
+        if (mappedFormat.failed()) {
+            return mappedFormat.mapFailure();
         }
 
         //attempt to convert the raw credential to JSON -> would mean LD, or JWT otherwise
@@ -137,7 +149,7 @@ public class CredentialWriterImpl implements CredentialWriter {
         }
         var credential = transformationResult.getContent();
 
-        var container = new VerifiableCredentialContainer(credentialWriteRequest.rawCredential(), credentialFormat, credential);
+        var container = new VerifiableCredentialContainer(credentialWriteRequest.rawCredential(), mappedFormat.getContent(), credential);
 
         var resource = VerifiableCredentialResource.Builder.newHolder()
                 .credential(container)
@@ -151,6 +163,7 @@ public class CredentialWriterImpl implements CredentialWriter {
 
         return ServiceResult.success(resource);
     }
+
 
     private Optional<JsonObject> tryConvertToJson(@NotNull String rawCredential) {
         try {

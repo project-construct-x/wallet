@@ -14,6 +14,7 @@
 
 package org.eclipse.edc.identityhub.tests;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import io.restassured.http.Header;
 import org.eclipse.edc.api.authentication.OauthServerEndToEndExtension;
 import org.eclipse.edc.iam.decentralizedclaims.sts.spi.store.StsAccountStore;
@@ -48,13 +49,16 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockserver.integration.ClientAndServer;
 
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static io.restassured.http.ContentType.JSON;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -70,8 +74,6 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
 
 public class VerifiableCredentialApiEndToEndTest {
 
@@ -110,7 +112,7 @@ public class VerifiableCredentialApiEndToEndTest {
                     .allSatisfy(auth -> identityHub.getIdentityEndpoint().baseRequest()
                             .contentType(JSON)
                             .header(auth)
-                            .get("/v1alpha/participants/%s/credentials/%s".formatted(user, resourceId))
+                            .get("/v1beta/participants/%s/credentials/%s".formatted(user, resourceId))
                             .then()
                             .log().ifValidationFails()
                             .statusCode(200)
@@ -135,7 +137,7 @@ public class VerifiableCredentialApiEndToEndTest {
             identityHub.getIdentityEndpoint().baseRequest()
                     .contentType(JSON)
                     .header(authorizeUser(SUPER_USER, identityHub))
-                    .get("/v1alpha/participants/%s/credentials/%s".formatted(user2, resourceIdUser1))
+                    .get("/v1beta/participants/%s/credentials/%s".formatted(user2, resourceIdUser1))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(404)
@@ -157,7 +159,7 @@ public class VerifiableCredentialApiEndToEndTest {
                                 .contentType(JSON)
                                 .header(auth)
                                 .body(manifest)
-                                .post("/v1alpha/participants/%s/credentials".formatted(user))
+                                .post("/v1beta/participants/%s/credentials".formatted(user))
                                 .then()
                                 .log().ifValidationFails()
                                 .statusCode(204)
@@ -184,7 +186,7 @@ public class VerifiableCredentialApiEndToEndTest {
                                 .contentType(JSON)
                                 .header(auth)
                                 .body(manifest)
-                                .put("/v1alpha/participants/%s/credentials".formatted(user))
+                                .put("/v1beta/participants/%s/credentials".formatted(user))
                                 .then()
                                 .log().ifValidationFails()
                                 .statusCode(204)
@@ -217,7 +219,7 @@ public class VerifiableCredentialApiEndToEndTest {
                     .contentType(JSON)
                     .header(authorizeUser(SUPER_USER, identityHub))
                     .body(updateManifest)
-                    .put("/v1alpha/participants/%s/credentials".formatted(otherUser))
+                    .put("/v1beta/participants/%s/credentials".formatted(otherUser))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(404)
@@ -239,7 +241,7 @@ public class VerifiableCredentialApiEndToEndTest {
                         identityHub.getIdentityEndpoint().baseRequest()
                                 .contentType(JSON)
                                 .header(auth)
-                                .delete("/v1alpha/participants/%s/credentials/%s".formatted(user, resourceId))
+                                .delete("/v1beta/participants/%s/credentials/%s".formatted(user, resourceId))
                                 .then()
                                 .log().ifValidationFails()
                                 .statusCode(204)
@@ -262,7 +264,7 @@ public class VerifiableCredentialApiEndToEndTest {
                     .allSatisfy(auth -> identityHub.getIdentityEndpoint().baseRequest()
                             .contentType(JSON)
                             .header(auth)
-                            .get("/v1alpha/participants/%s/credentials?type=%s".formatted(user, credential.getType().get(0)))
+                            .get("/v1beta/participants/%s/credentials?type=%s".formatted(user, credential.getType().get(0)))
                             .then()
                             .log().ifValidationFails()
                             .statusCode(200)
@@ -282,7 +284,7 @@ public class VerifiableCredentialApiEndToEndTest {
                     .allSatisfy(t -> identityHub.getIdentityEndpoint().baseRequest()
                             .contentType(JSON)
                             .header(t)
-                            .get("/v1alpha/participants/%s/credentials".formatted(user))
+                            .get("/v1beta/participants/%s/credentials".formatted(user))
                             .then()
                             .log().ifValidationFails()
                             .statusCode(200)
@@ -292,21 +294,19 @@ public class VerifiableCredentialApiEndToEndTest {
         @Test
         void createCredentialRequest(IdentityHub identityHub, HolderCredentialRequestStore store) {
             var port = getFreePort();
-            try (var mockedIssuer = ClientAndServer.startClientAndServer(port)) {
+            var mockedIssuer = new WireMockServer(port);
+            mockedIssuer.start();
+            try {
                 var issuerPid = "dummy-issuance-id";
                 // prepare DCP credential requests
-                mockedIssuer.when(request()
-                                .withMethod("POST")
-                                .withPath("/api/issuance/credentials"))
-                        .respond(response()
+                mockedIssuer.stubFor(post(urlPathEqualTo("/api/issuance/credentials"))
+                        .willReturn(aResponse()
                                 .withBody(issuerPid)
-                                .withStatusCode(201));
+                                .withStatus(201)));
 
                 // prepare DCP credential status requests. The state machine is so fast that it may tick over
-                mockedIssuer.when(request()
-                                .withMethod("GET")
-                                .withPath("/api/issuance/request/" + issuerPid))
-                        .respond(response()
+                mockedIssuer.stubFor(get(urlPathEqualTo("/api/issuance/request/" + issuerPid))
+                        .willReturn(aResponse()
                                 .withBody("""
                                         {
                                           "@context": [
@@ -317,7 +317,7 @@ public class VerifiableCredentialApiEndToEndTest {
                                           "status": "RECEIVED"
                                         }
                                         """)
-                                .withStatusCode(200));
+                                .withStatus(200)));
 
 
                 when(DID_RESOLVER_REGISTRY.resolve(eq("did:web:issuer")))
@@ -341,11 +341,11 @@ public class VerifiableCredentialApiEndToEndTest {
                         .contentType(JSON)
                         .header(auth)
                         .body(request)
-                        .post("/v1alpha/participants/%s/credentials/request".formatted(user))
+                        .post("/v1beta/participants/%s/credentials/request".formatted(user))
                         .then()
                         .log().ifValidationFails()
                         .statusCode(201)
-                        .header("Location", endsWith("/v1alpha/participants/%s/credentials/request/%s".formatted(user, holderPid)));
+                        .header("Location", endsWith("/v1beta/participants/%s/credentials/request/%s".formatted(user, holderPid)));
 
                 // wait until the state machine has progress to the REQUESTED state
                 await().pollInterval(Duration.ofSeconds(1))
@@ -357,6 +357,8 @@ public class VerifiableCredentialApiEndToEndTest {
                             assertThat(result.getIssuerPid()).isEqualTo(issuerPid);
                             assertThat(result.getHolderPid()).isEqualTo(holderPid);
                         });
+            } finally {
+                mockedIssuer.stop();
             }
         }
 
@@ -379,7 +381,7 @@ public class VerifiableCredentialApiEndToEndTest {
             identityHub.getIdentityEndpoint().baseRequest()
                     .contentType(JSON)
                     .header(header)
-                    .get("/v1alpha/participants/%s/credentials/request/%s".formatted(userId, holderPid))
+                    .get("/v1beta/participants/%s/credentials/request/%s".formatted(userId, holderPid))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(200)
@@ -410,7 +412,7 @@ public class VerifiableCredentialApiEndToEndTest {
             identityHub.getIdentityEndpoint().baseRequest()
                     .contentType(JSON)
                     .header(auth2) // user 2 tries to access credential request status for user 1 -> not allowed!
-                    .get("/v1alpha/participants/%s/credentials/request/%s".formatted(user1, holderPid))
+                    .get("/v1beta/participants/%s/credentials/request/%s".formatted(user1, holderPid))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(403);
@@ -426,7 +428,7 @@ public class VerifiableCredentialApiEndToEndTest {
             identityHub.getIdentityEndpoint().baseRequest()
                     .contentType(JSON)
                     .header(auth)
-                    .get("/v1alpha/participants/%s/credentials/request/%s".formatted(userId, holderPid))
+                    .get("/v1beta/participants/%s/credentials/request/%s".formatted(userId, holderPid))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(404);
@@ -448,7 +450,7 @@ public class VerifiableCredentialApiEndToEndTest {
             identityHub.getIdentityEndpoint().baseRequest()
                     .contentType(JSON)
                     .header(superUserAuth)
-                    .get("/v1alpha/credentials")
+                    .get("/v1beta/credentials")
                     .then()
                     .log().ifValidationFails()
                     .statusCode(200)
@@ -466,7 +468,7 @@ public class VerifiableCredentialApiEndToEndTest {
             identityHub.getIdentityEndpoint().baseRequest()
                     .contentType(JSON)
                     .header(userAuth)
-                    .get("/v1alpha/credentials")
+                    .get("/v1beta/credentials")
                     .then()
                     .log().ifValidationFails()
                     .statusCode(403);

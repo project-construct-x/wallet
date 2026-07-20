@@ -4,22 +4,23 @@ format.version = "1.1"
 [versions]
 awaitility = "4.3.0"
 bouncyCastle-jdk18on = "1.84"
-edc = "0.18.0-SNAPSHOT"
-dcp-tck = "1.0.0-RC6"
-jackson = "2.21"
+edc = "0.18.0"
+dcp-tck = "1.0.0"
+jackson = "2.22.0"
+jackson-annotations = "2.22"
 jakarta-annotation = "3.0.0"
 jersey = "4.0.2"
-jupiter = "6.0.3"
-junit = "6.0.3"
-mockserver = "5.15.0"
-nimbus = "10.9"
-postgres = "42.7.10"
+junit = "6.1.0"
+jupiter = "6.1.0"
+nimbus = "10.9.1"
+postgres = "42.7.11"
 restAssured = "6.0.0"
-swagger = "2.2.48"
+swagger = "2.2.51"
 rsApi = "4.0.0"
 testcontainers = "1.21.4"
 tink = "1.21.0"
 opentelemetry = "2.26.1"
+wiremock = "3.13.2"
 
 [libraries]
 
@@ -43,6 +44,7 @@ edc-spi-vc = { module = "org.eclipse.edc:verifiable-credentials-spi", version.re
 edc-spi-auth = { module = "org.eclipse.edc:auth-spi", version.ref = "edc" }
 edc-spi-did = { module = "org.eclipse.edc:identity-did-spi", version.ref = "edc" }
 edc-spi-participantcontext = { module = "org.eclipse.edc:connector-participant-context-spi", version.ref = "edc" }
+edc-spi-hashicorp-vault = { module = "org.eclipse.edc:vault-hashicorp-spi", version.ref = "edc" }
 edc-core-connector = { module = "org.eclipse.edc:connector-core", version.ref = "edc" }
 edc-core-token = { module = "org.eclipse.edc:token-core", version.ref = "edc" }
 edc-core-jersey = { module = "org.eclipse.edc:jersey-core", version.ref = "edc" }
@@ -64,6 +66,7 @@ edc-testfixtures-managementapi = { module = "org.eclipse.edc:management-api-test
 edc-api-version = { module = "org.eclipse.edc:version-api", version.ref = "edc" }
 edc-oauth2-client = { module = "org.eclipse.edc:oauth2-client", version.ref = "edc" }
 edc-encryption-aes = { module = "org.eclipse.edc:aes-encryption", version.ref = "edc" }
+edc-vault-hashicorp = { module = "org.eclipse.edc:vault-hashicorp", version.ref = "edc" }
 
 # EDC libs
 edc-lib-boot = { module = "org.eclipse.edc:boot-lib", version.ref = "edc" }
@@ -102,28 +105,29 @@ bouncyCastle-bcprovJdk18on = { module = "org.bouncycastle:bcprov-jdk18on", versi
 bouncyCastle-bcpkixJdk18on = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncyCastle-jdk18on" }
 
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
-jackson-annotation = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+jackson-annotation = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson-annotations" }
 jakarta-rsApi = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = "rsApi" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "jupiter" }
 junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "jupiter" }
-mockserver-netty = { module = "org.mock-server:mockserver-netty", version.ref = "mockserver" }
 nimbus-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus" }
 postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 restAssured = { module = "io.rest-assured:rest-assured", version.ref = "restAssured" }
 swagger-jaxrs = { module = "io.swagger.core.v3:swagger-jaxrs2-jakarta", version.ref = "swagger" }
 testcontainers-junit = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 testcontainers-postgres = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+testcontainers-vault = { module = "org.testcontainers:vault", version.ref = "testcontainers" }
 jakarta-annotation = { module = "jakarta.annotation:jakarta.annotation-api", version.ref = "jakarta-annotation" }
 jersey-common = { module = "org.glassfish.jersey.core:jersey-common", version.ref = "jersey" }
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 opentelemetry-instrumentation-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "opentelemetry" }
-opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version = "1.61.0" }
+opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version = "1.63.0" }
 opentelemetry-sdk = { module = "io.opentelemetry:opentelemetry-sdk", version.ref = "opentelemetry" }
+wiremock = { module = "org.wiremock:wiremock-jetty12", version.ref = "wiremock" }
 
 # DCP-TCK libraries
 dcp-testcases = { module = "org.eclipse.dataspacetck.dcp:dcp-testcases", version.ref = "dcp-tck" }
-dcp-tck-runtime = { module = "org.eclipse.dataspacetck.dsp:tck-runtime", version.ref = "dcp-tck" }
-dsp-core = { module = "org.eclipse.dataspacetck.dsp:core", version.ref = "dcp-tck" }
+tck-runtime = { module = "org.eclipse.dataspacetck.common:tck-runtime", version.ref = "dcp-tck" }
+tck-core = { module = "org.eclipse.dataspacetck.common:core", version.ref = "dcp-tck" }
 dcp-system = { module = "org.eclipse.dataspacetck.dcp:dcp-system", version.ref = "dcp-tck" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
 
@@ -141,4 +145,4 @@ connector = [
 
 [plugins]
 edc-build = { id = "org.eclipse.edc.edc-build", version = "1.5.2" }
-shadow = { id = "com.gradleup.shadow", version = "9.4.1" }
+shadow = { id = "com.gradleup.shadow", version = "9.4.2" }

@@ -14,6 +14,7 @@
 
 package org.eclipse.edc.identityhub.tests.dcp.api;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -56,12 +57,14 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockserver.integration.ClientAndServer;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static io.restassured.http.ContentType.JSON;
 import static jakarta.ws.rs.core.HttpHeaders.AUTHORIZATION;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -76,8 +79,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
 
 @SuppressWarnings("JUnitMalformedDeclaration")
 public class DcpCredentialRequestApiEndToEndTest {
@@ -126,7 +127,7 @@ public class DcpCredentialRequestApiEndToEndTest {
         }
 
         private static @NotNull String issuanceUrl() {
-            return "/v1alpha/participants/%s/credentials".formatted(ISSUER_ID);
+            return "/v1beta/participants/%s/credentials".formatted(ISSUER_ID);
         }
 
         @NotNull
@@ -168,18 +169,18 @@ public class DcpCredentialRequestApiEndToEndTest {
 
             var port = getFreePort();
 
-            try (var mockedCredentialService = ClientAndServer.startClientAndServer(port)) {
+            var mockedCredentialService = new WireMockServer(port);
+            mockedCredentialService.start();
+            try {
 
                 var issuerPid = "dummy-issuance-id";
-                mockedCredentialService.when(request()
-                                .withMethod("POST")
-                                .withPath("/api/credentials"))
-                        .respond(response()
+                mockedCredentialService.stubFor(post(urlPathEqualTo("/api/credentials"))
+                        .willReturn(aResponse()
                                 .withBody(issuerPid)
-                                .withStatusCode(201));
+                                .withStatus(201)));
 
 
-                var endpoint = "http://localhost:%s/api".formatted(mockedCredentialService.getLocalPort());
+                var endpoint = "http://localhost:%s/api".formatted(mockedCredentialService.port());
 
                 holderService.createHolder(createHolder(PARTICIPANT_DID, PARTICIPANT_DID, "Participant"));
 
@@ -234,7 +235,7 @@ public class DcpCredentialRequestApiEndToEndTest {
                         .extract()
                         .header("Location");
 
-                assertThat(location).contains("/v1alpha/participants/%s/requests".formatted(ISSUER_ID));
+                assertThat(location).contains("/v1beta/participants/%s/requests".formatted(ISSUER_ID));
 
                 var processId = location.substring(location.lastIndexOf('/') + 1);
 
@@ -251,6 +252,8 @@ public class DcpCredentialRequestApiEndToEndTest {
                                 assertThat(process.getHolderPid()).isEqualTo("holderPid");
                             });
                 });
+            } finally {
+                mockedCredentialService.stop();
             }
 
         }

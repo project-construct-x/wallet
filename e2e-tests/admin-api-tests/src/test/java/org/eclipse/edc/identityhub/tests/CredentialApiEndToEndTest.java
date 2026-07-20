@@ -17,6 +17,7 @@ package org.eclipse.edc.identityhub.tests;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
@@ -60,13 +61,18 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockserver.integration.ClientAndServer;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static io.restassured.http.ContentType.JSON;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.edc.identityhub.tests.TestData.EXAMPLE_REVOCATION_CREDENTIAL_JWT;
@@ -82,10 +88,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
-import static org.mockserver.model.StringBody.subString;
-import static org.mockserver.verify.VerificationTimes.exactly;
 
 @SuppressWarnings("JUnitMalformedDeclaration")
 public class CredentialApiEndToEndTest {
@@ -108,6 +110,7 @@ public class CredentialApiEndToEndTest {
                 .issuanceDate(Instant.now())
                 .id(credentialId)
                 .type("VerifiableCredential")
+                .type("TestCredential")
                 .credentialSubject(CredentialSubject.Builder.newInstance().id(UUID.randomUUID().toString()).claim("foo", "bar").build())
                 .credentialStatus(new CredentialStatus(credentialId + "#status", "BitstringStatusListEntry", Map.of(
                         "statusListIndex", STATUS_LIST_INDEX,
@@ -175,7 +178,7 @@ public class CredentialApiEndToEndTest {
                     .baseRequest()
                     .contentType(JSON)
                     .header(authorizeUser(USER, issuer))
-                    .post("/v1alpha/participants/%s/credentials/test-cred/revoke".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/test-cred/revoke".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(204);
@@ -198,7 +201,7 @@ public class CredentialApiEndToEndTest {
                     .baseRequest()
                     .contentType(JSON)
                     .header(authorizeUser(USER, issuer))
-                    .post("/v1alpha/participants/%s/credentials/test-cred/revoke".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/test-cred/revoke".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(204);
@@ -215,7 +218,7 @@ public class CredentialApiEndToEndTest {
                     .baseRequest()
                     .contentType(JSON)
                     .header(authorizeUser(USER, issuer))
-                    .post("/v1alpha/participants/%s/credentials/test-cred/revoke".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/test-cred/revoke".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(404)
@@ -238,7 +241,7 @@ public class CredentialApiEndToEndTest {
                     .baseRequest()
                     .contentType(JSON)
                     .header(authorizeUser("anotherUser", issuer))
-                    .post("/v1alpha/participants/%s/credentials/test-cred/revoke".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/test-cred/revoke".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(403);
@@ -254,7 +257,7 @@ public class CredentialApiEndToEndTest {
                     .baseRequest()
                     .contentType(JSON)
                     .header(authorizeUser(USER, issuer))
-                    .post("/v1alpha/participants/%s/credentials/test-cred/revoke".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/test-cred/revoke".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(404)
@@ -285,7 +288,7 @@ public class CredentialApiEndToEndTest {
                     .baseRequest()
                     .contentType(JSON)
                     .header(authorizeUser(USER, issuer))
-                    .post("/v1alpha/participants/%s/credentials/test-cred/revoke".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/test-cred/revoke".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(400)
@@ -306,7 +309,35 @@ public class CredentialApiEndToEndTest {
                     .body(QuerySpec.Builder.newInstance()
                             .filter(new Criterion("issuerId", "=", "issuer-id"))
                             .build())
-                    .post("/v1alpha/participants/%s/credentials/query".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/query".formatted(USER))
+                    .then()
+                    .log().ifValidationFails()
+                    .statusCode(200)
+                    .body("size()", equalTo(1));
+
+        }
+
+        @Test
+        void queryCredentials_byTypeAndParticipant(IssuerService issuer, CredentialStore credentialStore) {
+
+            var credential1 = createCredential("test-cred");
+            var credential2 = createCredential("test-cred-1", "another-user");
+            var participantContextId = credential1.getHolderId();
+            var type = "TestCredential";
+
+            credentialStore.create(credential1);
+            credentialStore.create(credential2);
+
+
+            issuer.getAdminEndpoint()
+                    .baseRequest()
+                    .contentType(JSON)
+                    .header(authorizeUser(USER, issuer))
+                    .body(QuerySpec.Builder.newInstance()
+                            .filter(new Criterion("holderId", "=", participantContextId))
+                            .filter(new Criterion("verifiableCredential.credential.type", "contains", type))
+                            .build())
+                    .post("/v1beta/participants/%s/credentials/query".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(200)
@@ -327,7 +358,7 @@ public class CredentialApiEndToEndTest {
                     .body(QuerySpec.Builder.newInstance()
                             .filter(new Criterion("issuerId", "=", "issuer-id"))
                             .build())
-                    .post("/v1alpha/participants/%s/credentials/query".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/query".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(200)
@@ -348,7 +379,7 @@ public class CredentialApiEndToEndTest {
             issuer.getAdminEndpoint()
                     .baseRequest()
                     .header(authorizeUser(USER, issuer))
-                    .get("/v1alpha/participants/%s/credentials/test-cred/status".formatted(USER))
+                    .get("/v1beta/participants/%s/credentials/test-cred/status".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(200)
@@ -369,7 +400,7 @@ public class CredentialApiEndToEndTest {
             issuer.getAdminEndpoint()
                     .baseRequest()
                     .header(authorizeUser("anotherUser", issuer))
-                    .get("/v1alpha/participants/%s/credentials/test-cred/status".formatted(USER))
+                    .get("/v1beta/participants/%s/credentials/test-cred/status".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(403);
@@ -389,14 +420,14 @@ public class CredentialApiEndToEndTest {
 
 
             var port = getFreePort();
-            try (var mockedHolderEndpoint = ClientAndServer.startClientAndServer(port)) {
+            var mockedHolderEndpoint = new WireMockServer(port);
+            mockedHolderEndpoint.start();
+            try {
 
-                mockedHolderEndpoint.when(request()
-                                .withPath("/api/holder/offers")
-                                .withMethod("POST"))
-                        .respond(response()
+                mockedHolderEndpoint.stubFor(post(urlPathEqualTo("/api/holder/offers"))
+                        .willReturn(aResponse()
                                 .withBody("foobar")
-                                .withStatusCode(200));
+                                .withStatus(200)));
 
 
                 holderStore.create(Holder.Builder.newInstance()
@@ -416,17 +447,17 @@ public class CredentialApiEndToEndTest {
                         .contentType(JSON)
                         .header(authorizeUser(USER, issuer))
                         .body(getOfferRequestBody())
-                        .post("/v1alpha/participants/%s/credentials/offer".formatted(USER))
+                        .post("/v1beta/participants/%s/credentials/offer".formatted(USER))
                         .then()
                         .log().ifValidationFails()
                         .statusCode(204);
 
-                mockedHolderEndpoint.verify(request()
-                        .withMethod("POST")
-                        .withPath("/api/holder/offers")
-                        .withBody(subString("credentialIssuer"))
-                        .withBody(subString("credentials"))
-                        .withBody(subString("TestCredential")), exactly(1));
+                mockedHolderEndpoint.verify(exactly(1), postRequestedFor(urlPathEqualTo("/api/holder/offers"))
+                        .withRequestBody(containing("issuer"))
+                        .withRequestBody(containing("credentials"))
+                        .withRequestBody(containing("TestCredential")));
+            } finally {
+                mockedHolderEndpoint.stop();
             }
         }
 
@@ -434,14 +465,14 @@ public class CredentialApiEndToEndTest {
         void sendCredentialOffer_offerMessageFailure(IssuerService issuer, HolderStore holderStore) {
 
             var port = getFreePort();
-            try (var mockedHolderDidServer = ClientAndServer.startClientAndServer(port)) {
+            var mockedHolderDidServer = new WireMockServer(port);
+            mockedHolderDidServer.start();
+            try {
 
-                mockedHolderDidServer.when(request()
-                                .withPath("/api/holder/offers")
-                                .withMethod("POST"))
-                        .respond(response()
+                mockedHolderDidServer.stubFor(post(urlPathEqualTo("/api/holder/offers"))
+                        .willReturn(aResponse()
                                 .withBody("foobar")
-                                .withStatusCode(404));
+                                .withStatus(404)));
 
 
                 holderStore.create(Holder.Builder.newInstance()
@@ -461,10 +492,12 @@ public class CredentialApiEndToEndTest {
                         .contentType(JSON)
                         .header(authorizeUser(USER, issuer))
                         .body(getOfferRequestBody())
-                        .post("/v1alpha/participants/%s/credentials/offer".formatted(USER))
+                        .post("/v1beta/participants/%s/credentials/offer".formatted(USER))
                         .then()
                         .log().ifValidationFails()
                         .statusCode(400);
+            } finally {
+                mockedHolderDidServer.stop();
             }
         }
 
@@ -485,7 +518,7 @@ public class CredentialApiEndToEndTest {
                     .contentType(JSON)
                     .header(authorizeUser(USER, issuer))
                     .body(getOfferRequestBody())
-                    .post("/v1alpha/participants/%s/credentials/offer".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/offer".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(400);
@@ -500,7 +533,7 @@ public class CredentialApiEndToEndTest {
                     .contentType(JSON)
                     .header(authorizeUser(USER, issuer))
                     .body(getOfferRequestBody())
-                    .post("/v1alpha/participants/%s/credentials/offer".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/offer".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(404)
@@ -522,7 +555,7 @@ public class CredentialApiEndToEndTest {
                     .contentType(JSON)
                     .header(authorizeUser("another-issuer", issuer))
                     .body(getOfferRequestBody())
-                    .post("/v1alpha/participants/%s/credentials/offer".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/offer".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(403);
@@ -543,7 +576,7 @@ public class CredentialApiEndToEndTest {
                     .contentType(JSON)
                     .header(authorizeUser("anotherIssuer", issuer))
                     .body(getOfferRequestBody())
-                    .post("/v1alpha/participants/%s/credentials/offer".formatted(USER))
+                    .post("/v1beta/participants/%s/credentials/offer".formatted(USER))
                     .then()
                     .log().ifValidationFails()
                     .statusCode(404);

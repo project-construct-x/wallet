@@ -12,9 +12,9 @@
  *
  */
 
+package de.fraunhofer.isst.edc.extension.attestation.dev;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.fraunhofer.isst.edc.extension.attestation.dev.DevAttestationSource;
-import de.fraunhofer.isst.edc.extension.attestation.dev.DevAttestationSourceValidator;
 import org.eclipse.edc.identityhub.protocols.dcp.issuer.DcpAttestationContext;
 import org.eclipse.edc.identityhub.protocols.dcp.spi.model.DcpRequestContext;
 import org.eclipse.edc.issuerservice.spi.holder.model.Holder;

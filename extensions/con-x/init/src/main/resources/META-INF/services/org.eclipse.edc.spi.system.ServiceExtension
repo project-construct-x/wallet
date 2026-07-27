@@ -1,1 +1,2 @@
-org.pb40.cx.identityhub.scope.SimpleScopeTransformerExtension
+org.pb40.edc.extension.scope.SimpleScopeTransformerExtension
+org.pb40.edc.extension.seed.SuperUserSeedExtension

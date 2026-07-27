@@ -1,17 +1,15 @@
 /*
- * Copyright (c) 2026. Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung e.V. (represented by Fraunhofer ISST)
+ *  Copyright (c) 2026 Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung e.V. (represented by Fraunhofer ISST)
  *
- * This program and the accompanying materials are made available under the
- * terms of the Apache License, Version 2.0 which is available at
- * https://www.apache.org/licenses/LICENSE-2.0.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Apache License, Version 2.0 which is available at
+ *  https://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ *  SPDX-License-Identifier: Apache-2.0
  *
- * SPDX-License-Identifier: Apache-2.0
+ *  Contributors:
+ *       Fraunhofer ISST - initial API and implementation
+ *
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +31,7 @@ import static org.eclipse.edc.junit.assertions.AbstractResultAssert.assertThat;
 import static org.mockito.Mockito.mock;
 
 public class DevAttestationTest {
-    static ObjectMapper MAPPER = new ObjectMapper();
+    static ObjectMapper mapper = new ObjectMapper();
     static DevAttestationSourceValidator validator = new DevAttestationSourceValidator();
     static Monitor monitor = mock();
 
@@ -68,8 +66,8 @@ public class DevAttestationTest {
                 .did("did:web:provider-idhub:user:provider").holderId("holder-id").build();
         DcpRequestContext requestContext = new DcpRequestContext(holder, new HashMap<>());
         AttestationContext attestationContext = new DcpAttestationContext(requestContext);
-        DevAttestationSource devAttestationSource = new DevAttestationSource
-                (Objects.requireNonNull(parseAttestationDefinition(testTemplateOne)).getConfiguration(), monitor);
+        DevAttestationSource devAttestationSource = new DevAttestationSource(
+                Objects.requireNonNull(parseAttestationDefinition(testTemplateOne)).getConfiguration(), monitor);
 
         assertThat(devAttestationSource.execute(attestationContext)).isFailed();
     }
@@ -80,8 +78,8 @@ public class DevAttestationTest {
                 .did("did:web:consumer-idhub:user:consumer").holderId("holder-id").build();
         DcpRequestContext requestContext = new DcpRequestContext(holder, new HashMap<>());
         AttestationContext attestationContext = new DcpAttestationContext(requestContext);
-        DevAttestationSource devAttestationSource = new DevAttestationSource
-                (Objects.requireNonNull(parseAttestationDefinition(testTemplateOne)).getConfiguration(), monitor);
+        DevAttestationSource devAttestationSource = new DevAttestationSource(
+                Objects.requireNonNull(parseAttestationDefinition(testTemplateOne)).getConfiguration(), monitor);
 
         assertThat(devAttestationSource.execute(attestationContext)).isSucceeded();
     }
@@ -206,7 +204,7 @@ public class DevAttestationTest {
 
     static AttestationDefinition parseAttestationDefinition(String template) {
         try {
-            Map<?, ?> json = MAPPER.readValue(template, Map.class);
+            Map<?, ?> json = mapper.readValue(template, Map.class);
             String type = json.get("attestationType").toString();
             String id = json.get("id").toString();
             Map<String, Object> config = (Map<String, Object>) json.get("configuration");

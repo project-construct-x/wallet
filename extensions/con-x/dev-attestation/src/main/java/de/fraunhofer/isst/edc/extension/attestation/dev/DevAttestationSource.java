@@ -1,17 +1,15 @@
 /*
- * Copyright (c) 2026. Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung e.V. (represented by Fraunhofer ISST)
+ *  Copyright (c) 2026 Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung e.V. (represented by Fraunhofer ISST)
  *
- * This program and the accompanying materials are made available under the
- * terms of the Apache License, Version 2.0 which is available at
- * https://www.apache.org/licenses/LICENSE-2.0.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Apache License, Version 2.0 which is available at
+ *  https://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ *  SPDX-License-Identifier: Apache-2.0
  *
- * SPDX-License-Identifier: Apache-2.0
+ *  Contributors:
+ *       Fraunhofer ISST - initial API and implementation
+ *
  */
 
 package de.fraunhofer.isst.edc.extension.attestation.dev;
@@ -26,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 
 public class DevAttestationSource implements AttestationSource {
-    public final static String BLACKLIST = "blackList";
-    public final static String DEFAULT = "default";
+    public static final String BLACKLIST = "blackList";
+    public static final String DEFAULT = "default";
 
     private final Map<String, Object> config;
     private final Monitor monitor;
@@ -54,4 +52,3 @@ public class DevAttestationSource implements AttestationSource {
         return Result.success(Map.of("content", content));
     }
 }
-

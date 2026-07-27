@@ -63,8 +63,8 @@ include(":extensions:sts:sts-account-provisioner")
 include(":extensions:sts:sts-account-service-local")
 include(":extensions:sts:sts-core")
 include(":extensions:sts:sts-api")
-include(":extensions:super-user-seed-extension")
 include(":extensions:con-x:dev-attestation")
+include(":extensions:con-x:init")
 include(":extensions:con-x:sql-vault")
 
 // DCP protocol modules

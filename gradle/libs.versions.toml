@@ -131,6 +131,10 @@ tck-core = { module = "org.eclipse.dataspacetck.common:core", version.ref = "dcp
 dcp-system = { module = "org.eclipse.dataspacetck.dcp:dcp-system", version.ref = "dcp-tck" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
 
+# Construct-X
+edc-ih-spi = { module = "org.eclipse.edc:identity-hub-spi", version.ref = "edc" }
+edc-jdk-monitor = { module = "org.eclipse.edc:monitor-jdk-logger", version.ref = "edc" }
+
 [bundles]
 connector = [
     "edc-boot",

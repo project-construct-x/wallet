@@ -2,6 +2,7 @@
 #  Copyright (c) 2026 Zentralverband der Deutschen Elektro- und Informationstechnischen Handwerke (ZVEH)
 #  Copyright (c) 2025 Cofinity-X
 #  Copyright (c) 2025,2026 LKS Next
+#  Copyright (c) 2026 ARENA2036 e.V.
 #  Copyright (c) 2025 Contributors to the Eclipse Foundation
 #
 #  See the NOTICE file(s) distributed with this work for additional
@@ -27,13 +28,14 @@
 # Controls whether the bundled sub-charts are installed alongside the wallet.
 # Set to false to use externally managed PostgreSQL or Vault instances.
 
+# The shared properties are defined to make it configuratble from the ArgoCD instance. 
 shared:
   imageTag: &imageTag "0.17.0-1"
-  hostname: &hostname "consumer-wallet.services.construct-x.net"
+  hostname: &hostname "wallet.services.construct-x.net"
   apiKey: &apiKey YWRtaW4.adminKey
   clusterIssuer: &clusterIssuer letsencrypt-serv
   ingressClass: &ingressClass nginx
-  secretName: &secretName consumer-wallet
+  secretName: &secretName wallet
   imagePullSecret: &imagePullSecret registry-creds
 
 install:

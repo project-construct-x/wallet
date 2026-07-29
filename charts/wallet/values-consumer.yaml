@@ -210,6 +210,7 @@ wallet:
         - credentials
         - did
         - sts
+        - identity        # the identity endpoint is enabled for API testing
       # -- Defines the [ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) to use
       className: *ingressClass
       # -- TLS [tls class](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls) applied to the ingress resource
@@ -225,11 +226,14 @@ wallet:
         # -- If preset enables certificate generation via cert-manager cluster-wide issuer
         clusterIssuer: *clusterIssuer
     ## Ingress for the Identity API, should not be internet facing
-    - enabled: false
+    - enabled: false                         # enabled for API testing
       # -- The hostname to be used to precisely map incoming traffic onto the underlying network service
       hostname: *hostname
       # -- Additional ingress annotations to add
-      annotations: {}
+      annotations:
+        cert-manager.io/cluster-issuer: *clusterIssuer
+        external-dns.alpha.kubernetes.io/hostname: *hostname
+        external-dns.alpha.kubernetes.io/ttl: "300"
       # -- EDC endpoints exposed by this ingress resource
       endpoints:
         - identity
@@ -240,7 +244,7 @@ wallet:
         # -- Enables TLS on the ingress resource
         enabled: false
         # -- If present overwrites the default secret name
-        secretName: ""
+        secretName: *secretName
       ## Adds [cert-manager](https://cert-manager.io/docs/) annotations to the ingress resource
       certManager:
         # -- If preset enables certificate generation via cert-manager namespace scoped issuer

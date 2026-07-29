@@ -26,6 +26,16 @@
 
 # Controls whether the bundled sub-charts are installed alongside the wallet.
 # Set to false to use externally managed PostgreSQL or Vault instances.
+
+shared:
+  imageTag: &imageTag "0.17.0-1"
+  hostname: &hostname "consumer-wallet.services.construct-x.net"
+  apiKey: &apiKey YWRtaW4.adminKey
+  clusterIssuer: &clusterIssuer letsencrypt-serv
+  ingressClass: &ingressClass nginx
+  secretName: &secretName consumer-wallet
+  imagePullSecret: &imagePullSecret registry-creds
+
 install:
   postgresql: true
   vault: true

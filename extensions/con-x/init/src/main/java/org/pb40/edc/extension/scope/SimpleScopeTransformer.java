@@ -30,21 +30,20 @@ public class SimpleScopeTransformer implements ScopeToCriterionTransformer {
 
     public static final String TYPE_OPERAND = "verifiableCredential.credential.type";
     public static final String CONTAINS_OPERATOR = "contains";
-    private static final String SCOPE_SEPARATOR = ":";
 
     @Override
     public Result<List<Criterion>> transformScope(String scope) {
-        var tokens = tokenize(scope);
-        if (tokens.failed()) {
-            return failure("Scope string cannot be converted: %s".formatted(tokens.getFailureDetail()));
+        var fullyQualifiedCredentialType = tokenize(scope);
+        if (fullyQualifiedCredentialType.failed()) {
+            return failure("Scope string cannot be converted: %s".formatted(fullyQualifiedCredentialType.getFailureDetail()));
         }
-        var credentialType = tokens.getContent()[1];
+        var credentialType = fullyQualifiedCredentialType.getContent();
         return success(List.of(new Criterion(TYPE_OPERAND, CONTAINS_OPERATOR, credentialType)));
     }
 
-    private Result<String[]> tokenize(String scope) {
+    private Result<String> tokenize(String scope) {
         if (scope == null) return failure("Scope was null");
-        var tokens = scope.split(SCOPE_SEPARATOR);
-        return success(tokens);
+        String credentialType = scope.substring(0, scope.lastIndexOf(":"));
+        return success(credentialType.substring(credentialType.lastIndexOf(":") + 1));
     }
 }

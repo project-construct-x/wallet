@@ -28,16 +28,6 @@
 # Controls whether the bundled sub-charts are installed alongside the wallet.
 # Set to false to use externally managed PostgreSQL or Vault instances.
 
-# The shared properties are defined to make it configuratble from the ArgoCD instance. 
-shared:
-  imageTag: &imageTag "0.17.0-1"
-  hostname: &hostname "wallet.services.construct-x.net"
-  apiKey: &apiKey YWRtaW4.adminKey
-  clusterIssuer: &clusterIssuer letsencrypt-serv
-  ingressClass: &ingressClass nginx
-  secretName: &secretName wallet
-  imagePullSecret: &imagePullSecret registry-creds
-
 install:
   postgresql: true
   vault: true
@@ -82,7 +72,7 @@ wallet:
     suspendOnStart: false
 
   # Public hostname of the wallet. Used to construct did:web URLs and ingress routing.
-  hostname: "wallet.staging.construct-x.net"
+  hostname: "wallet.services.construct-x.net"
 
   # Super-user participant seeded on first startup by the super-user-seed-extension.
   # The api key is stored in Vault under the alias derived from the participant id.
@@ -199,11 +189,11 @@ wallet:
     ## Public / Internet facing Ingress for the Presentation API
     - enabled: true
       # -- The hostname to be used to precisely map incoming traffic onto the underlying network service
-      hostname: "wallet.staging.construct-x.net"
+      hostname: "wallet.services.construct-x.net"
       # -- Additional ingress annotations to add
       annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-staging
-        external-dns.alpha.kubernetes.io/hostname: "wallet.staging.construct-x.net"
+        cert-manager.io/cluster-issuer: letsencrypt-serv
+        external-dns.alpha.kubernetes.io/hostname: "wallet.services.construct-x.net"
         external-dns.alpha.kubernetes.io/ttl: "300"
       # -- EDC endpoints exposed by this ingress resource
       endpoints:
@@ -217,17 +207,19 @@ wallet:
         # -- Enables TLS on the ingress resource
         enabled: true
         # -- If present overwrites the default secret name
-        secretName: "wallet-tls"
+        secretName: ""
       ## Adds [cert-manager](https://cert-manager.io/docs/) annotations to the ingress resource
       certManager:
         # -- If preset enables certificate generation via cert-manager namespace scoped issuer
         issuer: ""
         # -- If preset enables certificate generation via cert-manager cluster-wide issuer
-        clusterIssuer: "letsencrypt-staging"
+        clusterIssuer: "letsencrypt-serv"
     ## Ingress for the Identity API, should not be internet facing
     - enabled: false
       # -- The hostname to be used to precisely map incoming traffic onto the underlying network service
-      hostname: "wallet.staging.construct-x.net"
+      hostname: "wallet.services.construct-x.net"
+      # -- Optional prefix prepended to the hostname for this ingress (e.g. "internal." -> internal.<hostname>). Lets internal/private ingresses derive a distinct host from a single shared hostname and avoids name collisions.
+      hostnamePrefix: "internal-"
       # -- Additional ingress annotations to add
       annotations: {}
       # -- EDC endpoints exposed by this ingress resource
@@ -246,7 +238,7 @@ wallet:
         # -- If preset enables certificate generation via cert-manager namespace scoped issuer
         issuer: ""
         # -- If preset enables certificate generation via cert-manager cluster-wide issuer
-        clusterIssuer: "letsencrypt-staging"
+        clusterIssuer: "letsencrypt-serv"
 
   # Additional volumeMounts on the output Deployment definition.
   volumeMounts: []

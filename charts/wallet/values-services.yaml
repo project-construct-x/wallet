@@ -28,16 +28,6 @@
 # Controls whether the bundled sub-charts are installed alongside the wallet.
 # Set to false to use externally managed PostgreSQL or Vault instances.
 
-# The shared properties are defined to make it configuratble from the ArgoCD instance. 
-shared:
-  imageTag: &imageTag "0.17.0-1"
-  hostname: &hostname "wallet.services.construct-x.net"
-  apiKey: &apiKey YWRtaW4.adminKey
-  clusterIssuer: &clusterIssuer letsencrypt-serv
-  ingressClass: &ingressClass nginx
-  secretName: &secretName wallet
-  imagePullSecret: &imagePullSecret registry-creds
-
 install:
   postgresql: true
   vault: true
@@ -48,7 +38,7 @@ nameOverride: "wallet"
 
 # This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets:
-  - name: *imagePullSecret
+  - name: registry-creds
 
 # -- Add custom ca certificates to the truststore
 customCaCerts: {}
@@ -60,7 +50,7 @@ wallet:
     # This sets the pull policy for images.
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: *imageTag
+    tag: "0.17.0-1"
   initContainers: []
   # This is for setting Kubernetes Labels to a Pod.
   # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
@@ -83,7 +73,7 @@ wallet:
     suspendOnStart: false
 
   # Public hostname of the wallet. Used to construct did:web URLs and ingress routing.
-  hostname: *hostname
+  hostname: "wallet.services.construct-x.net"
 
   # Super-user participant seeded on first startup by the super-user-seed-extension.
   # The api key is stored in Vault under the alias derived from the participant id.
@@ -93,7 +83,7 @@ wallet:
     createSecret: true
     id: admin
     # API key for the super-user. Must follow the format base64(<id>).<random-suffix>.
-    apiKey: *apiKey
+    apiKey: YWRtaW4.adminKey
     publicKeyAlias: admin#pubkey
     privateKeyAlias: admin#privkey
   # -- Whether web DIDs should be interpreted as HTTPS or HTTP
@@ -199,41 +189,36 @@ wallet:
   ingresses:
     ## Public / Internet facing Ingress for the Presentation API
     - enabled: true
-      # -- The hostname to be used to precisely map incoming traffic onto the underlying network service
-      hostname: *hostname
       # -- Additional ingress annotations to add
       annotations:
-        cert-manager.io/cluster-issuer: *clusterIssuer
-        external-dns.alpha.kubernetes.io/hostname: *hostname
+        cert-manager.io/cluster-issuer: letsencrypt-serv
+        external-dns.alpha.kubernetes.io/hostname: "wallet.services.construct-x.net"
         external-dns.alpha.kubernetes.io/ttl: "300"
       # -- EDC endpoints exposed by this ingress resource
       endpoints:
         - credentials
         - did
         - sts
-        - identity                # the identity endpoint is enabled for API testing
       # -- Defines the [ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) to use
-      className: *ingressClass
+      className: "nginx"
       # -- TLS [tls class](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls) applied to the ingress resource
       tls:
         # -- Enables TLS on the ingress resource
         enabled: true
         # -- If present overwrites the default secret name
-        secretName: *secretName
+        secretName: ""
       ## Adds [cert-manager](https://cert-manager.io/docs/) annotations to the ingress resource
       certManager:
         # -- If preset enables certificate generation via cert-manager namespace scoped issuer
         issuer: ""
         # -- If preset enables certificate generation via cert-manager cluster-wide issuer
-        clusterIssuer: *clusterIssuer
+        clusterIssuer: "letsencrypt-serv"
     ## Ingress for the Identity API, should not be internet facing
-    - enabled: false
-      # -- The hostname to be used to precisely map incoming traffic onto the underlying network service
-      hostname: *hostname
+    - enabled: true                       # enabled for API testing
       # -- Additional ingress annotations to add
       annotations:
-        cert-manager.io/cluster-issuer: *clusterIssuer
-        external-dns.alpha.kubernetes.io/hostname: *hostname
+        cert-manager.io/cluster-issuer: letsencrypt-serv
+        external-dns.alpha.kubernetes.io/hostname: "wallet.services.construct-x.net"
         external-dns.alpha.kubernetes.io/ttl: "300"
       # -- EDC endpoints exposed by this ingress resource
       endpoints:
@@ -243,15 +228,15 @@ wallet:
       # -- TLS [tls class](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls) applied to the ingress resource
       tls:
         # -- Enables TLS on the ingress resource
-        enabled: false
+        enabled: true
         # -- If present overwrites the default secret name
-        secretName: *secretName
+        secretName: ""
       ## Adds [cert-manager](https://cert-manager.io/docs/) annotations to the ingress resource
       certManager:
         # -- If preset enables certificate generation via cert-manager namespace scoped issuer
         issuer: ""
         # -- If preset enables certificate generation via cert-manager cluster-wide issuer
-        clusterIssuer: *clusterIssuer
+        clusterIssuer: "letsencrypt-serv"
 
   # Additional volumeMounts on the output Deployment definition.
   volumeMounts: []

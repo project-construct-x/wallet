@@ -189,6 +189,8 @@ wallet:
   ingresses:
     ## Public / Internet facing Ingress for the Presentation API
     - enabled: true
+      # -- The hostname to be used to precisely map incoming traffic onto the underlying network service
+      hostname: "wallet.services.construct-x.net"
       # -- Additional ingress annotations to add
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt-serv
@@ -199,6 +201,7 @@ wallet:
         - credentials
         - did
         - sts
+        - identity                  # The 'identity' endpoint is exposed here for API testing. Normally, this endpoint should be usually exposed by private ingress resource.  
       # -- Defines the [ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) to use
       className: "nginx"
       # -- TLS [tls class](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls) applied to the ingress resource
@@ -214,7 +217,9 @@ wallet:
         # -- If preset enables certificate generation via cert-manager cluster-wide issuer
         clusterIssuer: "letsencrypt-serv"
     ## Ingress for the Identity API, should not be internet facing
-    - enabled: true                       # enabled for API testing
+    - enabled: false                       # enabled for API testing
+      # -- The hostname to be used to precisely map incoming traffic onto the underlying network service
+      hostname: "wallet.services.construct-x.net"
       # -- Additional ingress annotations to add
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt-serv

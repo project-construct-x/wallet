@@ -24,20 +24,10 @@
 {{- $gitVersion := .Capabilities.KubeVersion.GitVersion }}
 {{- $namespace := .Release.Namespace }}
 
-{{- range $i, $ingress := .Values.wallet.ingresses }}
+{{- range .Values.wallet.ingresses }}
 {{- if and .enabled .endpoints }}
-{{- /* effective hostname = optional per-ingress prefix (e.g. "internal.") + shared hostname */}}
-{{- $hostname := $ingress.hostname }}
-{{- if not $hostname }}
-{{- $hostname = $.Values.wallet.hostname | required "Set wallet.hostname (or a per-ingress hostname)" }}
-{{- if eq $i 1 }}{{- $hostname = printf "internal-%s" $hostname }}{{- else if gt $i 1 }}{{- $hostname = printf "internal%d-%s" $i $hostname }}{{- end }}
-{{- end }}
-{{- $controlIngressName := printf "%s-%s" $fullName $hostname }}
+{{- $controlIngressName := printf "%s-%s" $fullName .hostname }}
 {{- $annotations := .annotations | default dict }}
-{{- /* keep the external-dns record in sync with the (possibly prefixed) host */}}
-{{- if hasKey $annotations "external-dns.alpha.kubernetes.io/hostname" }}
-{{- $_ := set $annotations "external-dns.alpha.kubernetes.io/hostname" $hostname }}
-{{- end }}
 
 {{- if semverCompare ">=1.19-0" $gitVersion }}
 apiVersion: networking.k8s.io/v1
@@ -73,22 +63,22 @@ spec:
   {{- if and .className (semverCompare ">=1.18-0" $gitVersion) }}
   ingressClassName: {{ .className }}
   {{- end }}
-  {{- if $hostname }}
-  {{- if $ingress.tls.enabled }}
+  {{- if .hostname }}
+  {{- if .tls.enabled }}
   tls:
     - hosts:
-        - {{ $hostname }}
-      {{- if $ingress.tls.secretName }}
+        - {{ .hostname }}
+      {{- if .tls.secretName }}
       secretName: {{ .tls.secretName }}
       {{- else }}
       secretName: {{ $controlIngressName }}-tls
       {{- end }}
   {{- end }}
   rules:
-    - host: {{ $hostname }}
+    - host: {{ .hostname }}
       http:
         paths:
-          {{- $ingressEdcEndpoints := $ingress.endpoints }}
+          {{- $ingressEdcEndpoints := .endpoints }}
           {{- range  $name, $mapping := $controlEdcEndpoints }}
           {{- if (has $name $ingressEdcEndpoints) }}
           - path: {{ $mapping.path }}

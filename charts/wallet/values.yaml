@@ -218,8 +218,6 @@ wallet:
     - enabled: false
       # -- The hostname to be used to precisely map incoming traffic onto the underlying network service
       hostname: "wallet.services.construct-x.net"
-      # -- Optional prefix prepended to the hostname for this ingress (e.g. "internal." -> internal.<hostname>). Lets internal/private ingresses derive a distinct host from a single shared hostname and avoids name collisions.
-      hostnamePrefix: "internal-"
       # -- Additional ingress annotations to add
       annotations: {}
       # -- EDC endpoints exposed by this ingress resource

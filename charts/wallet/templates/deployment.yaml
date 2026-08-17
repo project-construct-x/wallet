@@ -27,6 +27,11 @@ metadata:
   name: {{ include "wallet.fullname" . }}
   labels:
     {{- include "wallet.server.labels" . | nindent 4 }}
+  annotations:
+    # Boot the runtime only after the vault-init Job (wave 1) has seeded the AES key.
+    # Under `helm install` this annotation is ignored and ordering is not enforced, but
+    # the runtime simply CrashLoops until the key is present, then recovers.
+    "argocd.argoproj.io/sync-wave": "2"
 spec:
   {{- if not .Values.wallet.autoscaling.enabled }}
   replicas: {{ .Values.wallet.replicaCount }}

@@ -27,9 +27,12 @@ metadata:
   labels:
     {{- include "wallet.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-weight": "0"
-    "helm.sh/hook-delete-policy": before-hook-creation
+    # ArgoCD ordering: run after Vault/Postgres (wave 0) are Healthy, but before the
+    # wallet Deployment (wave 2), so the AES key exists before the runtime boots.
+    # Replace=true recreates the Job on every sync (Jobs are otherwise immutable) and
+    # lets a re-sync re-seed a dev-mode Vault that lost its in-memory secrets on restart.
+    "argocd.argoproj.io/sync-wave": "1"
+    "argocd.argoproj.io/sync-options": Replace=true
 spec:
   backoffLimit: 3
   ttlSecondsAfterFinished: 600

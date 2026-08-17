@@ -29,9 +29,8 @@ metadata:
   labels:
     {{- include "wallet.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-weight": "-5"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    # Must exist before the vault-init Job (wave 1) mounts it; create it early.
+    "argocd.argoproj.io/sync-wave": "0"
 data:
   init.sh: |
     #!/usr/bin/env sh

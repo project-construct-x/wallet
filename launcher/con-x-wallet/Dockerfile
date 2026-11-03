@@ -15,6 +15,10 @@
 #
 
 FROM eclipse-temurin:25-jre-alpine
+
+RUN apk upgrade --no-cache \
+    && rm -rf /var/cache/apk/*
+
 WORKDIR /app
 
 ARG IMAGE_CREATED

@@ -15,7 +15,9 @@
 #
 
 FROM eclipse-temurin:25-jre-alpine
-WORKDIR /app
+
+RUN apk upgrade --no-cache \
+    && rm -rf /var/cache/apk/*
 
 ARG IMAGE_CREATED
 ARG VERSION_TAG
@@ -29,10 +31,30 @@ LABEL org.opencontainers.image.title="Construct-X Wallet" \
       org.opencontainers.image.created="${IMAGE_CREATED}"
 
 ARG JAR_FILE
-COPY build/libs/${JAR_FILE} /app/app.jar
 
-COPY build/docker/runtimeClasspath-dependencies.txt /app/DEPENDENCIES
-COPY build/docker/LICENSE /app/LICENSE
-COPY NOTICE_DOCKER.md /app/NOTICE.md
+# non-root runtime user, uid/gid aligned with the Helm chart defaults (runAsUser/fsGroup: 10100)
+ARG APP_USER=wallet
+ARG APP_UID=10100
+ARG APP_GID=10100
 
-ENTRYPOINT ["sh","-c","exec java -jar /app/app.jar --log-level=debug"]
+RUN addgroup --system --gid "$APP_GID" "$APP_USER" \
+    && adduser \
+         --system \
+         --shell /sbin/nologin \
+         --disabled-password \
+         --ingroup "$APP_USER" \
+         --no-create-home \
+         --uid "$APP_UID" \
+         "$APP_USER"
+
+WORKDIR /app
+
+COPY --chown=$APP_UID:$APP_GID build/libs/${JAR_FILE} /app/app.jar
+
+COPY --chown=$APP_UID:$APP_GID build/docker/runtimeClasspath-dependencies.txt /app/DEPENDENCIES
+COPY --chown=$APP_UID:$APP_GID build/docker/LICENSE /app/LICENSE
+COPY --chown=$APP_UID:$APP_GID NOTICE_DOCKER.md /app/NOTICE.md
+
+USER $APP_UID:$APP_GID
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar", "--log-level=debug"]

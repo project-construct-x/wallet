@@ -36,6 +36,13 @@ dependencies {
 
     runtimeOnly(project(":extensions:super-user-seed-extension"))
     runtimeOnly(project(":extensions:con-x:dev-attestation"))
+
+
+    // Hotfix version overrides
+    implementation("com.fasterxml.jackson.core:jackson-core:2.22.4")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.4")
+    implementation("org.eclipse.jetty:jetty-security:12.1.14")
+    implementation("org.eclipse.jetty:jetty-server:12.1.14")
 }
 
 repositories { mavenCentral() }
@@ -44,7 +51,7 @@ application {
     mainClass.set("org.eclipse.edc.boot.system.runtime.BaseRuntime")
 }
 
-val releaseVersion = "$edcVersion-1"
+val releaseVersion = "$edcVersion-2"
 
 tasks.shadowJar {
     mergeServiceFiles()
@@ -112,6 +119,8 @@ tasks.register<Exec>("dockerize") {
 
         commandLine(
             "docker", "build",
+            "--no-cache",
+            "--pull",
             "--build-arg", "JAR_FILE=$jarFileName",
             "--build-arg", "IMAGE_CREATED=$imageCreated",
             "--build-arg", "VERSION_TAG=$releaseVersion",

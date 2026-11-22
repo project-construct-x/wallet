@@ -35,5 +35,7 @@ dependencies {
         exclude(group = "org.junit.platform")
         exclude(group = "org.junit")
     }
+    testImplementation(platform("org.junit:junit-bom:${property("junitVersion")}"))
+    testImplementation("org.junit.jupiter:junit-jupiter-api:${property("junitVersion")}")
 }
 

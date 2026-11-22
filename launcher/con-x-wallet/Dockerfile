@@ -14,7 +14,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-FROM eclipse-temurin:25-jre-alpine
+# pinned: contains fix for CVE-2026-114938 (Java4Shell)
+FROM eclipse-temurin:25.0.5.1_2-jre-alpine
 
 RUN apk upgrade --no-cache \
     && rm -rf /var/cache/apk/*

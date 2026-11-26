@@ -25,6 +25,7 @@ plugins {
 }
 
 val edcVersion = project.property("con-x-edcVersion") as String
+val jacksonVersion = project.property("jacksonVersion") as String
 
 dependencies {
     runtimeOnly("org.eclipse.edc:console-monitor:${edcVersion}")
@@ -39,10 +40,10 @@ dependencies {
 
 
     // Hotfix version overrides
-    implementation("com.fasterxml.jackson.core:jackson-core:2.22.4")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.4")
-    implementation("org.eclipse.jetty:jetty-security:12.1.14")
-    implementation("org.eclipse.jetty:jetty-server:12.1.14")
+    implementation("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+    implementation("org.eclipse.jetty:jetty-security:12.1.15")
+    implementation("org.eclipse.jetty:jetty-server:12.1.15")
 }
 
 repositories { mavenCentral() }
@@ -51,7 +52,7 @@ application {
     mainClass.set("org.eclipse.edc.boot.system.runtime.BaseRuntime")
 }
 
-val releaseVersion = "$edcVersion-2"
+val releaseVersion = "$edcVersion-1"
 
 tasks.shadowJar {
     mergeServiceFiles()

@@ -54,6 +54,10 @@ public class DevAttestationSourceValidator implements Validator<AttestationDefin
                             "configuration.blackList", blackList));
                 }
                 for (var id : blackList) {
+                    if (id instanceof String did && !DID_WEB_REGEX.matcher(did).matches()) {
+                        violations.add(new Violation("-blacklisted id " + did + " is not a valid did:web id-",
+                                "configuration.blackList", did));
+                    }
                     if (config.containsKey(id.toString())) {
                         violations.add(new Violation("-" + id + " is blacklisted, but at the same time given an " +
                                 "individual credential subject content-", "", ""));

@@ -49,7 +49,10 @@ public class DevAttestationSource implements AttestationSource {
         var content = config.getOrDefault(context.holder().getDid(),
                 config.getOrDefault(DEFAULT, new HashMap<>()));
         if (content instanceof Map<?, ?> contentMap && !contentMap.containsKey("id")) {
-            ((Map<String, Object>) contentMap).put("id", context.holder().getDid());
+            // copy, so that the shared configuration (e.g. the "default" entry) is never mutated
+            var subject = new HashMap<String, Object>((Map<String, Object>) contentMap);
+            subject.put("id", context.holder().getDid());
+            content = subject;
         }
         return Result.success(Map.of("content", content));
     }

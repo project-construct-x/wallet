@@ -36,6 +36,7 @@ public class DidDocument {
     private final List<VerificationMethod> verificationMethod = new ArrayList<>();
     private final List<String> authentication = new ArrayList<>();
     private final List<String> capabilityInvocation = new ArrayList<>();
+    private final List<String> assertionMethod = new ArrayList<>();
 
     public String getId() {
         return id;
@@ -63,13 +64,19 @@ public class DidDocument {
         return capabilityInvocation;
     }
 
+    public List<String> getAssertionMethod() {
+        bindVerificationRelationships();
+        return assertionMethod;
+    }
+
     @Override
     public String toString() {
         return getId();
     }
 
     /**
-     * Every verification method is an authentication and capabilityInvocation reference.
+     * Every verification method is an authentication, capabilityInvocation and assertionMethod reference.
+     * The wallet uses these keys to sign both self-issued tokens and credentials/presentations.
      */
     private void bindVerificationRelationships() {
         var keyIds = new ArrayList<String>();
@@ -83,6 +90,8 @@ public class DidDocument {
         authentication.addAll(keyIds);
         capabilityInvocation.clear();
         capabilityInvocation.addAll(keyIds);
+        assertionMethod.clear();
+        assertionMethod.addAll(keyIds);
     }
 
     @JsonPOJOBuilder(withPrefix = "")
@@ -126,6 +135,11 @@ public class DidDocument {
 
         public Builder capabilityInvocation(List<String> capabilityInvocation) {
             document.capabilityInvocation.addAll(capabilityInvocation);
+            return this;
+        }
+
+        public Builder assertionMethod(List<String> assertionMethod) {
+            document.assertionMethod.addAll(assertionMethod);
             return this;
         }
 

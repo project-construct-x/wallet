@@ -34,6 +34,7 @@ dependencies {
     api(libs.edc.spi.core)
     api(libs.edc.spi.keys)
     api(libs.nimbus.jwt)
+    testImplementation(libs.jackson.databind)
 }
 
 tasks.named<JavaCompile>("compileJava") {
